@@ -91,7 +91,9 @@ function viewStock(){
     <div class="row"><button class="p" onclick="scanJan()">📷 バーコードを読み取る</button></div>
     <div id="scan"></div>
     <label>JANコード（読めない場合は手入力）</label>
-    <input id="y_jan" inputmode="numeric" placeholder="4901234567890">
+    <div class="row"><input id="y_jan" inputmode="numeric" placeholder="4901234567890" style="flex:1"
+      onchange="lookupJan()"><button class="s" onclick="lookupJan()">商品名を調べる</button></div>
+    <p id="y_lookup" class="muted"></p>
     <label>商品名</label>
     <input id="y_name">
     <label>色・色番</label>
@@ -103,6 +105,11 @@ function viewStock(){
       <label style="flex:1">在庫の玉数<input id="y_n" type="number" min="0" value="1"></label>
     </div>
     <button class="p" onclick="addYarn()">在庫に追加</button>
+  </div>
+  <div class="card">
+    <label>楽天アプリID（商品名の自動表示に使います。一度入力すると保存されます）</label>
+    <input id="rk_id" value="${esc(localStorage.getItem('knit-rakuten-id') || '')}"
+      onchange="localStorage.setItem('knit-rakuten-id', this.value.trim())">
   </div>
   <h2>在庫（${db.yarns.length}件）</h2>
   ${db.yarns.map(yarnCard).join('') || '<p class="muted">まだ毛糸がありません</p>'}`;
@@ -141,9 +148,31 @@ function scanJan(){
     const code = result.getText();
     stopScan();
     $('y_jan').value = code;
+    lookupJan();
   }).catch(e => {
     box.innerHTML = `<p class="muted">カメラを使えませんでした（${esc(e.message)}）。手入力してください。</p>`;
   });
+}
+
+// 楽天商品検索APIでJANコードから商品名を取得する（アプリIDは設定欄に入力）
+async function lookupJan(){
+  const jan = val('y_jan');
+  const msg = $('y_lookup');
+  const appId = localStorage.getItem('knit-rakuten-id') || '';
+  if (!/^\d{13}$/.test(jan)) { msg.textContent = 'JANコードは13桁の数字で入力してください'; return; }
+  if (!appId) { msg.textContent = '下の「楽天アプリID」を入力すると、商品名を自動で表示できます'; return; }
+  msg.textContent = '商品名を検索中…';
+  try {
+    const url = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601'
+      + `?applicationId=${encodeURIComponent(appId)}&jancode=${jan}&format=json`;
+    const json = await (await fetch(url)).json();
+    const item = json.Items?.[0]?.Item;
+    if (!item) { msg.textContent = '商品が見つかりませんでした。商品名は手で入力してください'; return; }
+    if (!val('y_name')) $('y_name').value = item.itemName;
+    msg.textContent = '商品名を入れました（違う場合は修正できます）';
+  } catch (e) {
+    msg.textContent = `検索に失敗しました（${e.message}）。商品名は手で入力してください`;
+  }
 }
 
 function addYarn(){
