@@ -172,8 +172,9 @@ async function lookupJan(){
       + (accessKey ? `&accessKey=${encodeURIComponent(accessKey)}` : '');
     const res = await fetch(url, { headers: { Referer: location.href } });
     const json = await res.json();
-    if (json.error) {
-      msg.textContent = `楽天からエラー：${json.error_description || json.error}`;
+    if (json.errors || json.error) {
+      const e = json.errors || json.error;
+      msg.textContent = `楽天からエラー：${e.errorMessage || e.error_description || e.error || e}`;
       return;
     }
     const item = json.Items?.[0]?.Item;
