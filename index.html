@@ -174,7 +174,10 @@ async function lookupJan(){
     const json = await res.json();
     if (json.errors || json.error) {
       const e = json.errors || json.error;
-      msg.textContent = `楽天からエラー：${e.errorMessage || e.error_description || e.error || e}`;
+      let shown = url.replace(appId, '（アプリID）');
+      if (accessKey) shown = shown.replace(accessKey, '（キー）');
+      msg.innerHTML = `楽天からエラー：${esc(e.errorMessage || e.error_description || e.error || e)}<br>`
+        + `<small>送信内容：${esc(shown)}</small>`;
       return;
     }
     const item = json.Items?.[0]?.Item;
