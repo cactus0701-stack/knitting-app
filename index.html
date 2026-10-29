@@ -170,7 +170,7 @@ async function lookupJan(){
     const url = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601'
       + `?applicationId=${encodeURIComponent(appId)}&jancode=${jan}&format=json`
       + (accessKey ? `&accessKey=${encodeURIComponent(accessKey)}` : '');
-    const res = await fetch(url, { headers: { Referer: location.href } });
+    const res = await fetch(url);
     const json = await res.json();
     if (json.errors || json.error) {
       const e = json.errors || json.error;
