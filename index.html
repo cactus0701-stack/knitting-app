@@ -110,6 +110,9 @@ function viewStock(){
     <label>楽天アプリID（商品名の自動表示に使います。一度入力すると保存されます）</label>
     <input id="rk_id" value="${esc(localStorage.getItem('knit-rakuten-id') || '')}"
       onchange="localStorage.setItem('knit-rakuten-id', this.value.trim())">
+    <label>楽天アクセスキー（楽天の登録画面に表示されていれば入力します）</label>
+    <input id="rk_key" value="${esc(localStorage.getItem('knit-rakuten-key') || '')}"
+      onchange="localStorage.setItem('knit-rakuten-key', this.value.trim())">
   </div>
   <h2>在庫（${db.yarns.length}件）</h2>
   ${db.yarns.map(yarnCard).join('') || '<p class="muted">まだ毛糸がありません</p>'}`;
@@ -159,13 +162,20 @@ async function lookupJan(){
   const jan = val('y_jan');
   const msg = $('y_lookup');
   const appId = localStorage.getItem('knit-rakuten-id') || '';
+  const accessKey = localStorage.getItem('knit-rakuten-key') || '';
   if (!/^\d{13}$/.test(jan)) { msg.textContent = 'JANコードは13桁の数字で入力してください'; return; }
   if (!appId) { msg.textContent = '下の「楽天アプリID」を入力すると、商品名を自動で表示できます'; return; }
   msg.textContent = '商品名を検索中…';
   try {
     const url = 'https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601'
-      + `?applicationId=${encodeURIComponent(appId)}&jancode=${jan}&format=json`;
-    const json = await (await fetch(url)).json();
+      + `?applicationId=${encodeURIComponent(appId)}&jancode=${jan}&format=json`
+      + (accessKey ? `&accessKey=${encodeURIComponent(accessKey)}` : '');
+    const res = await fetch(url, { headers: { Referer: location.href } });
+    const json = await res.json();
+    if (json.error) {
+      msg.textContent = `楽天からエラー：${json.error_description || json.error}`;
+      return;
+    }
     const item = json.Items?.[0]?.Item;
     if (!item) { msg.textContent = '商品が見つかりませんでした。商品名は手で入力してください'; return; }
     if (!val('y_name')) $('y_name').value = item.itemName;
